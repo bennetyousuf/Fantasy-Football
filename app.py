@@ -2,29 +2,52 @@
 ################################################# 
 
 import numpy as np
-
+import os
+import requests
 import sqlalchemy
 import datetime as dt
 from sqlalchemy.ext.automap import automap_base
-from sqlalchemy.orm import Session
+# from sqlalchemy.orm import Session
 from sqlalchemy import create_engine, func
-from flask import request
+from flask import request, redirect
 
-from flask import Flask, jsonify, render_template 
+from flask import Flask, jsonify, render_template
 
+
+#################################################
+# Flask Setup
+#################################################
+app = Flask(__name__)
+
+#################################################
+# Database Setup
+#################################################
+from flask_sqlalchemy import SQLAlchemy
 # Create connection to Hawaii.sqlite file
 #################################################
 
 connection_string = "postgres:postgres@localhost:5432/NFL_Fantasy_Data"
 engine = create_engine(f'postgresql://{connection_string}')
 
-# reflect an existing database into a new model
+
+
+# from flask_sqlalchemy import SQLAlchemy
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', '') or 'sqlite:///site.db'
+db = SQLAlchemy(app)
+# Remove tracking modifications
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+
+# # #import the table that will be used to deploy on remote Heroku app
+# from .models import ADP, DEF, K, Position_Dropdown,QB, RB,TE, WR, Highlights, BoxPlot
+
+# reflect an existing values from local Postgres database into a new model
 Base = automap_base()
 
 # reflect the tables
 Base.prepare(engine, reflect=True)
 
-# # Save references to the measurement and station tables in the database
+# # Save references to tables in the local database
 print(Base.classes.keys())
 ADP = Base.classes.ADP_Data
 DEF = Base.classes.DEF_Data
@@ -36,10 +59,7 @@ TE = Base.classes.TE_Data
 WR = Base.classes.WR_Data
 Highlights = Base.classes.Highlights_Data
 BoxPlot = Base.classes.BoxPlot
-# Initialize Flask
-#################################################
-app = Flask(__name__)
-app.config['JSON_SORT_KEYS'] = False   
+
 
 # Create Flask Routes 
 
@@ -59,15 +79,15 @@ def home():
 @app.route("/api/v1.0/Highlights")
 def highlights_data():
     # Create our session (link) from Python to the DB
-    session = Session(engine)
+    # session = Session(engine)
 
     """Return a list of precipitation (prcp)and date (date) data"""
     
     # Create new variable to store results from query to Measurement table for prcp and date columns
-    adp_query_results = session.query(Highlights.Name,Highlights.Team, Highlights.Position,Highlights.AverageDraftPosition,Highlights.AverageDraftPositionPPR, Highlights.ByeWeek,Highlights.LastSeasonFantasyPoints,Highlights.ProjectedFantasyPoints).all()
+    adp_query_results = db.session.query(Highlights.Name,Highlights.Team, Highlights.Position,Highlights.AverageDraftPosition,Highlights.AverageDraftPositionPPR, Highlights.ByeWeek,Highlights.LastSeasonFantasyPoints,Highlights.ProjectedFantasyPoints).all()
 
     # Close session
-    session.close()
+    # session.close()
 
     # # Create a dictionary from the row data and append to a list of position_query_values
     # Below steps explain how all loops in all Flask Routes for JSON data will work
@@ -95,15 +115,15 @@ def highlights_data():
 @app.route("/api/v1.0/ADP_Data")
 def adp_data():
     # Create our session (link) from Python to the DB
-    session = Session(engine)
+    # session = Session(engine)
 
     """Return a list of precipitation (prcp)and date (date) data"""
     
     # Create new variable to store results from query to Measurement table for prcp and date columns
-    adp_query_results = session.query(ADP.Name,ADP.Team, ADP.Position,ADP.AverageDraftPosition,ADP.AverageDraftPositionPPR, ADP.ByeWeek,ADP.LastSeasonFantasyPoints,ADP.ProjectedFantasyPoints).all()
+    adp_query_results = db.session.query(ADP.Name,ADP.Team, ADP.Position,ADP.AverageDraftPosition,ADP.AverageDraftPositionPPR, ADP.ByeWeek,ADP.LastSeasonFantasyPoints,ADP.ProjectedFantasyPoints).all()
 
     # Close session
-    session.close()
+    # session.close()
 
     # # Create a dictionary from the row data and append to a list of position_query_values
     # Below steps explain how all loops in all Flask Routes for JSON data will work
@@ -129,15 +149,15 @@ def adp_data():
 @app.route("/api/v1.0/Projected_Data")
 def projected_data():
     # Create our session (link) from Python to the DB
-    session = Session(engine)
+    # session = Session(engine)
 
     """Return a list of precipitation (prcp)and date (date) data"""
     
     # Create new variable to store results from query to Measurement table for prcp and date columns
-    projected_query_results = session.query(BoxPlot.NAME,BoxPlot.POSITION,BoxPlot.PROJECTED_POINTS).all()
+    projected_query_results = db.session.query(BoxPlot.NAME,BoxPlot.POSITION,BoxPlot.PROJECTED_POINTS).all()
 
     # Close session
-    session.close()
+    # session.close()
 
     # # Create a dictionary from the row data and append to a list of position_query_values
     # Below steps explain how all loops in all Flask Routes for JSON data will work
@@ -160,16 +180,16 @@ def projected_data():
 @app.route("/api/v1.0/position")
 def position_drop_down_data():
     # Create our session (link) from Python to the DB
-    session = Session(engine)
+    # session = Session(engine)
 
     """Return a list of precipitation (prcp)and date (date) data"""
     
     # Create new variable to store results from query to Measurement table for prcp and date columns
-    position_query_results = session.query(Position_Dropdown.Position).all()
+    position_query_results = db.session.query(Position_Dropdown.Position).all()
 
     print(position_query_results)
     # Close session
-    session.close()
+    # session.close()
 
     # # Create a dictionary from the row data and append to a list of position_query_values
     # Below steps explain how all loops in all Flask Routes for JSON data will work
@@ -191,10 +211,10 @@ def position_drop_down_data():
 # @app.route("/api/v1.0/DEF")
 def DEF_Data(): 
 
-    session = Session(engine)
+    # session = Session(engine)
 
 #     """Return a list of all columns from the DEF table in the database""" 
-    def_query_results = session.query(DEF.Name, DEF.Team, DEF.Position, DEF.AverageDraftPosition, DEF.AverageDraftPositionPPR,DEF.ByeWeek, DEF.LastSeasonFantasyPoints,DEF.ProjectedFantasyPoints).all()
+    def_query_results = db.session.query(DEF.Name, DEF.Team, DEF.Position, DEF.AverageDraftPosition, DEF.AverageDraftPositionPPR,DEF.ByeWeek, DEF.LastSeasonFantasyPoints,DEF.ProjectedFantasyPoints).all()
 
 #     session.close()  
     
@@ -216,12 +236,12 @@ def DEF_Data():
 @app.route("/api/v1.0/K")
 def K_Data(): 
 
-    session = Session(engine)
+    # session = Session(engine)
 
     """Return a list of all columns from the K table from the database""" 
-    def_query_results = session.query(K.Name, K.Team, K.Position, K.AverageDraftPosition, K.AverageDraftPositionPPR,K.ByeWeek, K.LastSeasonFantasyPoints,K.ProjectedFantasyPoints).all()
+    def_query_results = db.session.query(K.Name, K.Team, K.Position, K.AverageDraftPosition, K.AverageDraftPositionPPR,K.ByeWeek, K.LastSeasonFantasyPoints,K.ProjectedFantasyPoints).all()
 
-    session.close()  
+    # session.close()  
     
     K_Data_values = []
     for name, team, position,averagedraftposition,averagedraftpositionppr, byeweek, lastseasonfantasypoints, projectedfantasypoints in def_query_results:
@@ -240,12 +260,12 @@ def K_Data():
 @app.route("/api/v1.0/QB")
 def QB_Data(): 
 
-    session = Session(engine)
+    # session = Session(engine)
 
     """Return a list of all columns from the QB table from the database""" 
-    def_query_results = session.query(QB.Name, QB.Team, QB.Position, QB.AverageDraftPosition, QB.AverageDraftPositionPPR,QB.ByeWeek, QB.LastSeasonFantasyPoints,QB.ProjectedFantasyPoints).all()
+    def_query_results = db.session.query(QB.Name, QB.Team, QB.Position, QB.AverageDraftPosition, QB.AverageDraftPositionPPR,QB.ByeWeek, QB.LastSeasonFantasyPoints,QB.ProjectedFantasyPoints).all()
 
-    session.close()  
+    # session.close()  
     
     QB_Data_values = []
     for name, team, position,averagedraftposition,averagedraftpositionppr, byeweek, lastseasonfantasypoints, projectedfantasypoints in def_query_results:
@@ -265,12 +285,12 @@ def QB_Data():
 @app.route("/api/v1.0/RB")
 def RB_Data(): 
 
-    session = Session(engine)
+    # session = Session(engine)
 
     """Return a list of all columns from the RB table from the database""" 
-    def_query_results = session.query(RB.Name, RB.Team, RB.Position, RB.AverageDraftPosition, RB.AverageDraftPositionPPR,RB.ByeWeek, RB.LastSeasonFantasyPoints,RB.ProjectedFantasyPoints).all()
+    def_query_results = db.session.query(RB.Name, RB.Team, RB.Position, RB.AverageDraftPosition, RB.AverageDraftPositionPPR,RB.ByeWeek, RB.LastSeasonFantasyPoints,RB.ProjectedFantasyPoints).all()
 
-    session.close()  
+    # session.close()  
     
     RB_Data_values = []
     for name, team, position,averagedraftposition,averagedraftpositionppr, byeweek, lastseasonfantasypoints, projectedfantasypoints in def_query_results:
@@ -289,14 +309,14 @@ def RB_Data():
 @app.route("/api/v1.0/WR")
 def WR_Data(): 
 
-    session = Session(engine)
+    # session = Session(engine)
 
     """Return a list of all columns from the WR table from the database""" 
 
    
-    def_query_results = session.query(WR.Name, WR.Team, WR.Position, WR.AverageDraftPosition, WR.AverageDraftPositionPPR,WR.ByeWeek, WR.LastSeasonFantasyPoints,WR.ProjectedFantasyPoints).all()
+    def_query_results = db.session.query(WR.Name, WR.Team, WR.Position, WR.AverageDraftPosition, WR.AverageDraftPositionPPR,WR.ByeWeek, WR.LastSeasonFantasyPoints,WR.ProjectedFantasyPoints).all()
 
-    session.close()  
+    # session.close()  
     
     WR_Data_values = []
     for name, team, position,averagedraftposition,averagedraftpositionppr, byeweek, lastseasonfantasypoints, projectedfantasypoints in def_query_results:
@@ -315,13 +335,13 @@ def WR_Data():
 @app.route("/api/v1.0/TE")
 def TE_Data(): 
 
-    session = Session(engine)
+    # session = Session(engine)
 
     """Return a list of all columns from the TE table from the database""" 
 
-    def_query_results = session.query(TE.Name, TE.Team, TE.Position, TE.AverageDraftPosition, TE.AverageDraftPositionPPR,TE.ByeWeek, TE.LastSeasonFantasyPoints,TE.ProjectedFantasyPoints).all()
+    def_query_results = db.session.query(TE.Name, TE.Team, TE.Position, TE.AverageDraftPosition, TE.AverageDraftPositionPPR,TE.ByeWeek, TE.LastSeasonFantasyPoints,TE.ProjectedFantasyPoints).all()
 
-    session.close()  
+    # session.close()  
     
     TE_Data_values = []
     for name, team, position,averagedraftposition,averagedraftpositionppr, byeweek, lastseasonfantasypoints, projectedfantasypoints in def_query_results:
@@ -344,7 +364,7 @@ def Highlight_Data():
 
     """Return a list of all columns from the TE table from the database""" 
 
-    def_query_results = session.query( func.min(QB.AverageDraftPosition), QB.Name, QB.Team, QB.Position, QB.AverageDraftPosition, QB.AverageDraftPositionPPR,QB.ByeWeek, QB.LastSeasonFantasyPoints,QB.ProjectedFantasyPoints).all()
+    def_query_results = db.session.query( func.min(QB.AverageDraftPosition), QB.Name, QB.Team, QB.Position, QB.AverageDraftPosition, QB.AverageDraftPositionPPR,QB.ByeWeek, QB.LastSeasonFantasyPoints,QB.ProjectedFantasyPoints).all()
 
     session.close()  
     
